@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "grpc";
+option java_outer_classname = "TimeTestProto";
+
+package grpc;
+
+service TimeCount {
+  rpc GetMessageByMyMessage(MyRequest) returns (MyResponse) {}
+}
+
+message MyRequest {
+  string datasend = 1;
+}
+
+message MyResponse {
+  string dataget = 1;
+}
