@@ -26,9 +26,6 @@ import com.ibm.disni.RdmaActiveEndpoint;
 import com.ibm.disni.RdmaActiveEndpointGroup;
 import com.ibm.disni.RdmaEndpointFactory;
 import com.ibm.disni.verbs.*;
-import grpc.abc.MyRequest;
-import grpc.abc.MyResponse;
-import io.grpc.StatusRuntimeException;
 import org.apache.commons.cli.ParseException;
 
 import java.io.IOException;
@@ -36,10 +33,8 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.concurrent.ArrayBlockingQueue;
-import java.util.logging.Level;
 
 
 public class SendRecvClient implements RdmaEndpointFactory<SendRecvClient.CustomClientEndpoint> {
@@ -65,66 +60,38 @@ public class SendRecvClient implements RdmaEndpointFactory<SendRecvClient.Custom
 		endpoint.connect(address, 1000);
 		System.out.println("SimpleClient::client channel set up ");
 
-		/**
-		 * test model
-		 */
-		System.out.println("---------- begin to test ----------");
-
-		int[] data = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-				1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-				1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-				1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-				1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-				1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-				1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-				1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-				1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-				1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-		String dataString = Arrays.toString(data);
-		System.out.println("test data: " + dataString);
-		System.out.println("data size: " + dataString.getBytes(StandardCharsets.UTF_8).length);
-
 		long startTime = System.nanoTime();
-		long maxTime = Long.MIN_VALUE;
-		long minTime = Long.MAX_VALUE;
-		for (int i = 0; i < 1000; i++) {
-			// System.out.println("begin round: " + i);
-			long startRoundTime = System.nanoTime();
+		//in our custom endpoints we have prepared (memory registration and work request creation) some memory
+		//buffers beforehand.
+		//let's send one of those buffers out using a send operation
+		ByteBuffer sendBuf = endpoint.getSendBuf();
+		sendBuf.asCharBuffer().put("Hello from the client");
+		System.out.println("test data siza: " + "Hello from the client".getBytes(StandardCharsets.UTF_8).length);
+		sendBuf.clear();
+		SVCPostSend postSend = endpoint.postSend(endpoint.getWrList_send());
+		postSend.getWrMod(0).setWr_id(4444);
+		postSend.execute().free();
+		//in our custom endpoints we make sure CQ events get stored in a queue, we now query that queue for new CQ events.
+		//in this case a new CQ event means we have sent data, i.e., the message has been sent to the server
+		IbvWC wc = endpoint.getWcEvents().take();
+		System.out.println("SimpleClient::message sent, wr_id " + wc.getWr_id());
+		//in this case a new CQ event means we have received data
+		endpoint.getWcEvents().take();
+		System.out.println("SimpleClient::message received");
 
-			// 收发 message
-			//in our custom endpoints we have prepared (memory registration and work request creation) some memory
-			//buffers beforehand.
-			//let's send one of those buffers out using a send operation
-			ByteBuffer sendBuf = endpoint.getSendBuf();
-			sendBuf.asCharBuffer().put(dataString);
-			sendBuf.clear();
-			SVCPostSend postSend = endpoint.postSend(endpoint.getWrList_send());
-			postSend.getWrMod(i).setWr_id(4444 + i);
-			postSend.execute().free();
-			//in our custom endpoints we make sure CQ events get stored in a queue, we now query that queue for new CQ events.
-			//in this case a new CQ event means we have sent data, i.e., the message has been sent to the server
-			IbvWC wc = endpoint.getWcEvents().take();
-			System.out.println("SimpleClient::message sent, wr_id " + wc.getWr_id());
-			//in this case a new CQ event means we have received data
-			endpoint.getWcEvents().take();
-//			System.out.println("SimpleClient::message received");
-
-			//the response should be received in this buffer, let's print it
-			ByteBuffer recvBuf = endpoint.getRecvBuf();
-			recvBuf.clear();
-//			System.out.println("Message from the server: " + recvBuf.asCharBuffer().toString());
-		}
+		//the response should be received in this buffer, let's print it
+		ByteBuffer recvBuf = endpoint.getRecvBuf();
+		recvBuf.clear();
+		System.out.println("Message from the server: " + recvBuf.asCharBuffer().toString());
 		long endTime = System.nanoTime();
-		System.out.println("Total time (1000 rounds): " + (endTime - startTime) + "ns");
-		System.out.println("Round i maxtime (1000 rounds): " + maxTime + "ns");
-		System.out.println("Round i mintime (1000 rounds): " + minTime + "ns");
+		System.out.println("Round time: " + (endTime - startTime));
 
-		System.out.println("---------- Test over ----------");
-
+		//close everything
 		endpoint.close();
 		System.out.println("endpoint closed");
 		endpointGroup.close();
 		System.out.println("group closed");
+//		System.exit(0);
 	}
 
 	public void launch(String[] args) throws Exception {
