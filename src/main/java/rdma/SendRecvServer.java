@@ -63,23 +63,31 @@ public class SendRecvServer implements RdmaEndpointFactory<SendRecvServer.Custom
 		//we have previously passed our own endpoint factory to the group, therefore new endpoints will be of type CustomServerEndpoint
 		System.out.println("SimpleServer::client connection accepted");
 
-		//in our custom endpoints we have prepared (memory registration and work request creation) some memory buffers beforehand.
-		ByteBuffer sendBuf = clientEndpoint.getSendBuf();
-		sendBuf.asCharBuffer().put("Hello from the server");
-		sendBuf.clear();
+		/**
+		 * test model
+		 */
+		System.out.println("---------- begin to test ----------");
+		for (int i = 0; i < 1000; i++) {
+			//in our custom endpoints we make sure CQ events get stored in a queue, we now query that queue for new CQ events.
+			//in this case a new CQ event means we have received data, i.e., a message from the client.
+			clientEndpoint.getWcEvents().take();
+			System.out.println("SimpleServer::message received");
+			ByteBuffer recvBuf = clientEndpoint.getRecvBuf();
+			recvBuf.clear();
+//			System.out.println("Message from the client: " + recvBuf.asCharBuffer().toString());
 
-		//in our custom endpoints we make sure CQ events get stored in a queue, we now query that queue for new CQ events.
-		//in this case a new CQ event means we have received data, i.e., a message from the client.
-		clientEndpoint.getWcEvents().take();
-		System.out.println("SimpleServer::message received");
-		ByteBuffer recvBuf = clientEndpoint.getRecvBuf();
-		recvBuf.clear();
-		System.out.println("Message from the client: " + recvBuf.asCharBuffer().toString());
-		//let's respond with a message
-		clientEndpoint.postSend(clientEndpoint.getWrList_send()).execute().free();
-		//when receiving the CQ event we know the message has been sent
-		clientEndpoint.getWcEvents().take();
-		System.out.println("SimpleServer::message sent");
+			//in our custom endpoints we have prepared (memory registration and work request creation) some memory buffers beforehand.
+			ByteBuffer sendBuf = clientEndpoint.getSendBuf();
+			sendBuf.asCharBuffer().put(recvBuf.asCharBuffer().toString());
+			sendBuf.clear();
+			//let's respond with a message
+			clientEndpoint.postSend(clientEndpoint.getWrList_send()).execute().free();
+			//when receiving the CQ event we know the message has been sent
+			clientEndpoint.getWcEvents().take();
+			System.out.println("SimpleServer::message sent");
+		}
+
+		System.out.println("---------- Test over ----------");
 
 		//close everything
 		clientEndpoint.close();

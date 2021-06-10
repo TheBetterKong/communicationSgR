@@ -11,6 +11,8 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="disni-2.1-jar-with-dependencies" level="project" />
+    <orderEntry type="library" name="disni-2.1-tests" level="project" />
     <orderEntry type="library" name="Maven: io.grpc:grpc-netty-shaded:1.38.0" level="project" />
     <orderEntry type="library" name="Maven: io.grpc:grpc-core:1.38.0" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Maven: com.google.code.gson:gson:2.8.6" level="project" />
@@ -32,7 +34,5 @@
     <orderEntry type="library" scope="RUNTIME" name="Maven: org.codehaus.mojo:animal-sniffer-annotations:1.19" level="project" />
     <orderEntry type="library" name="Maven: io.grpc:grpc-stub:1.38.0" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: org.apache.tomcat:annotations-api:6.0.53" level="project" />
-    <orderEntry type="library" name="disni-2.1-jar-with-dependencies" level="project" />
-    <orderEntry type="library" name="disni-2.1-tests" level="project" />
   </component>
 </module>
